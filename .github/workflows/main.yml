@@ -26,4 +26,4 @@ jobs:
           image: podhrmic/rust-sel4-sel4cp-demo:latest
           options: -v ${{ github.workspace }}:/work
           run: |
-            ls -al
+            make compile
