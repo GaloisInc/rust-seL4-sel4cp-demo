@@ -24,6 +24,6 @@ jobs:
         uses: addnab/docker-run-action@v3
         with:
           image: podhrmic/rust-sel4-sel4cp-demo:latest
-          options: -v ${{ github.workspace }}:/HARDENS
+          options: -v ${{ github.workspace }}:/rust-seL4-sel4cp-demo 
           run: |
             make compile
