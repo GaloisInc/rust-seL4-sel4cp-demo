@@ -23,7 +23,9 @@ crates := \
 	uart-interface-types \
 	eth-driver \
 	ethernet-interface-types \
-	eth-client
+	eth-client \
+	timer \
+	timer-interface-types
 endif
 
 sel4cp_config := debug
