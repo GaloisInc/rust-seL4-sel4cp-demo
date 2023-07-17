@@ -1,8 +1,7 @@
-use core::ptr;
 use core::ops::Deref;
 
 use tock_registers::interfaces::{Readable, Writeable, ReadWriteable};
-use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
+use tock_registers::registers::{ReadOnly, ReadWrite};
 use tock_registers::{register_bitfields, register_structs};
 
 use sel4cp::debug_print;
@@ -71,12 +70,15 @@ register_bitfields! {
 
 pub struct TtcDevice {
     ptr: *const TtcRegisterBlock,
-    cnt: u128, // uptime in ms
+    cnt_ms: i64, // uptime in ms
 }
 
 impl TtcDevice {
     pub unsafe fn new(ptr: *const TtcRegisterBlock) -> Self {
-        Self { ptr: ptr, cnt: 0 }
+        Self {
+            ptr: ptr,
+            cnt_ms: 0,
+        }
     }
 
     fn ptr(&self) -> *const TtcRegisterBlock {
@@ -127,7 +129,11 @@ impl TtcDevice {
     pub fn handle_irq(&mut self) {
         // clear interrupts
         self.InterruptRegister.get();
-        self.cnt = self.cnt + 1;
+        self.cnt_ms = self.cnt_ms + 1;
+    }
+
+    pub fn uptime_ms(&self) -> i64 {
+        self.cnt_ms
     }
 
 }
