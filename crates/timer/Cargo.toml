@@ -12,4 +12,4 @@ embedded-hal = "0.2"
 heapless = "0.7.16"
 nb = "1.0"
 time = { version = "0.3", default-features = false }
-timer-interface-types = { path = "../timer-interface-types" }
+timer-interface-types = { path = "../interfaces/timer-interface-types" }
