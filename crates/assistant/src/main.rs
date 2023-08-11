@@ -22,6 +22,7 @@ use embedded_hal::serial::{Read as SerialRead, Write as SerialWrite};
 
 const UART_DRIVER: Channel = Channel::new(0);
 const TALENT: Channel = Channel::new(1);
+const ETH_TEST: Channel = Channel::new(3);
 
 const REGION_SIZE: usize = 0x4_000;
 
@@ -72,6 +73,7 @@ impl Handler for ThisHandler {
                     }
                     prompt(&mut self.serial);
                 } else {
+                    ETH_TEST.notify(); // ping the ethernet client upon each non-newline keystroke
                     let c = char::from(b);
                     if c.is_ascii() && !c.is_ascii_control() {
                         if self.buffer.len() == MAX_SUBJECT_LEN {
