@@ -21,8 +21,24 @@
     <memory_region name="eth_driver_tx_buf" size="0x4_000" />
     <memory_region name="eth_driver_rx_buf" size="0x4_000" />
 
+    <!-- Protection domains -->
+    <!-- Timer -->
+    <protection_domain name="timer" priority="254" pp="false">
+        <program_image path="timer.elf" />
+        <!-- The TTC clock is at 100MHz -->
+        <map mr="ttc0_mmio" vaddr="0xFF110000" perms="rw" setvar_vaddr="ttc0_register_block" />
+        <!-- maybe separate the timers to different components, for better security -->
+        <!-- <map mr="ttc1_mmio" vaddr="0xFF120000" perms="rw" setvar_vaddr="ttc1_register_block" />
+        <map mr="ttc2_mmio" vaddr="0xFF130000" perms="rw" setvar_vaddr="ttc2_register_block" />
+        <map mr="ttc3_mmio" vaddr="0xFF140000" perms="rw" setvar_vaddr="ttc3_register_block" /> -->
+        <!-- all irq numbers are from: https://docs.xilinx.com/r/en-US/ug1085-zynq-ultrascale-trm/System-Interrupts?tocId=PD9FTob69sVTjQEM8sOQ~g-->
+        <!-- TTC 0 -->
+        <irq irq="68" id="4" />
+        <irq irq="69" id="5" />
+        <irq irq="70" id="36" />
+    </protection_domain>
 
-    <!-- Protected domains -->
+    <!-- UART -->
     <protection_domain name="uart_driver" priority="251" pp="true">
         <program_image path="uart-driver.elf" />
         <map mr="uart_mmio" vaddr="0xFF000000" perms="rw" setvar_vaddr="uart_register_block" />
@@ -32,7 +48,7 @@
     </protection_domain>
 
     <!-- TBD -->
-    <protection_domain name="eth_driver" priority="254" pp="true">
+    <protection_domain name="eth_driver" priority="253" pp="true">
         <program_image path="eth-driver.elf" />
         <!-- <map mr="eth_driver_tx_buf" vaddr="0x2_004_000" perms="rw" cached="true" setvar_vaddr="tx_buf_region_start" />
         <map mr="eth_driver_rx_buf" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="rx_buf_region_start" /> -->
@@ -40,7 +56,7 @@
 
     <!-- This will eventually be network stack, but it can be just a loopback for now-->
     <!-- TBD -->
-    <protection_domain name="eth_client" priority="254" pp="true">
+    <protection_domain name="eth_client" priority="253" pp="true">
         <program_image path="eth-client.elf" />
         <map mr="eth_driver_tx_buf" vaddr="0x2_004_000" perms="rw" cached="true" setvar_vaddr="tx_buf_region_start" />
         <map mr="eth_driver_rx_buf" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="rx_buf_region_start" />
@@ -52,7 +68,7 @@
         <map mr="assistant_to_artist" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="region_out_start" />
     </protection_domain>
 
-    <protection_domain name="artist" priority="253" pp="true">
+    <protection_domain name="artist" priority="251" pp="true">
         <program_image path="banscii-artist.elf" />
         <map mr="assistant_to_artist" vaddr="0x2_004_000" perms="r" cached="true" setvar_vaddr="region_in_start" />
         <map mr="artist_to_assistant" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="region_out_start" />

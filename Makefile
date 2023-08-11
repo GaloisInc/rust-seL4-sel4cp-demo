@@ -9,9 +9,7 @@ crates := \
 	banscii-artist \
 	banscii-assistant \
 	banscii-pl011-driver \
-	uart-interface-types \
 	eth-driver \
-	ethernet-interface-types \
 	eth-client
 else
 sel4cp_board := zcu102
@@ -20,10 +18,9 @@ crates := \
 	banscii-artist \
 	banscii-assistant \
 	uart-driver \
-	uart-interface-types \
 	eth-driver \
-	ethernet-interface-types \
-	eth-client
+	eth-client \
+	timer
 endif
 
 sel4cp_config := debug
