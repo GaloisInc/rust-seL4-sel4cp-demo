@@ -14,9 +14,9 @@ pub use heapless::Vec;
 pub const MTU: usize = 1500;
 
 /// Number of buffers available for transmitting frames. Set to an arbitrary value for now.
-pub const TX_BUF_SIZE: usize = 8;
+pub const TX_BUF_SIZE: usize = 4;
 /// Number of buffers available for receiving frames. Set to an arbitrary value for now.
-pub const RX_BUF_SIZE: usize = 8;
+pub const RX_BUF_SIZE: usize = 4;
 
 pub type Buf = heapless::Vec<u8, MTU>;
 pub type Bufs = [Buf];

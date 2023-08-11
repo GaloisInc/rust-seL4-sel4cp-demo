@@ -72,8 +72,8 @@ impl Handler for ThisHandler {
                         self.try_create();
                     }
                     prompt(&mut self.serial);
-                } else {
                     ETH_TEST.notify(); // ping the ethernet client upon each non-newline keystroke
+                } else {
                     let c = char::from(b);
                     if c.is_ascii() && !c.is_ascii_control() {
                         if self.buffer.len() == MAX_SUBJECT_LEN {

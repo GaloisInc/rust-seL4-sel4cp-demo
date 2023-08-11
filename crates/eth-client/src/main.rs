@@ -61,8 +61,8 @@ impl Handler for ThisHandler {
             ETH_TEST => {
                 debug_print!("Got notification!\n");
 
-                //test_ethernet_loopback(self);
-                test_udp_loopback(self);
+                test_ethernet_loopback(self);
+                //test_udp_loopback(self);
                 //test_tcp_loopback(self);
             }
             _ => unreachable!(),
@@ -74,7 +74,7 @@ impl Handler for ThisHandler {
 fn test_ethernet_loopback(h: &mut ThisHandler) {
     debug_print!("Testing ethernet loopback\n");
 
-    match h.device.transmit(Instant::from_millis(100)) {
+    match h.device.transmit(Instant::from_millis(0)) {
         None => debug_print!("Didn't get a TX token\n"),
         Some(tx) => {
             debug_print!("Got a TX token\nSending some data: PING\n");
@@ -83,7 +83,7 @@ fn test_ethernet_loopback(h: &mut ThisHandler) {
     }
 
     loop {
-        match h.device.receive(Instant::from_millis(100)) {
+        match h.device.receive(Instant::from_millis(0)) {
             None => continue,
             Some((rx, _tx)) => {
                 rx.consume(|buffer| debug_print!("Got an RX token: {}\n", core::str::from_utf8(buffer).unwrap()));
