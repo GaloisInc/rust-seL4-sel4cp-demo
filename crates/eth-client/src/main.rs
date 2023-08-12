@@ -170,8 +170,11 @@ fn test_udp_loopback(h: &mut ThisHandler) {
                 debug_print!("Got a UDP packet from {source}: {}\n", core::str::from_utf8(packet).unwrap());
                 break;
             },
-            Err(_e) => {
-                //debug_print!("Error:{:?}\n",e);
+            Err(e) => {
+                // print the last error we see before leaving the loop
+                if x == 9 {
+                    debug_print!("Error:{:?}\n",e);
+                }
             }
         }
     }
