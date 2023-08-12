@@ -82,20 +82,29 @@ impl Handler for ThisHandler {
 fn test_ethernet_loopback(h: &mut ThisHandler) {
     debug_print!("Testing ethernet loopback\n");
 
+    let mut msg = [0u8; 4];
+    h.cnt.numtoa_str(10, &mut msg);
+
     match h.device.transmit(Instant::from_millis(h.cnt)) {
-        None => debug_print!("Didn't get a TX token\n"),
+        None => debug_print!("[test_ethernet_loopback] Didn't get a TX token\n"),
         Some(tx) => {
-            debug_print!("Got a TX token\nSending some data: PING\n");
-            tx.consume(4, |buffer| buffer.copy_from_slice("PING".as_ref()))
+            debug_print!("[test_ethernet_loopback] Got a TX token\nSending some data: {}\n",core::str::from_utf8(&msg).unwrap());
+            tx.consume(4, |buffer| buffer.copy_from_slice(msg.as_ref()))
         }
     }
     let mut x = 0;
     while x < 10 {
         x = x + 1;
         match h.device.receive(Instant::from_millis(h.cnt + x)) {
-            None => continue,
+            None => {
+                if x == 9 {
+                    debug_print!("[test_ethernet_loopback] Nothing was received:-(");
+                } else {
+                    continue
+                }
+            },
             Some((rx, _tx)) => {
-                rx.consume(|buffer| debug_print!("Got an RX token: {}\n", core::str::from_utf8(buffer).unwrap()));
+                rx.consume(|buffer| debug_print!("[test_ethernet_loopback] Got an RX token of length {}: {}\n", buffer.len(), core::str::from_utf8(buffer).unwrap()));
                 break;
             }
         }
