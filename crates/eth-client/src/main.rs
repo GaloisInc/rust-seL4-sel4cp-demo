@@ -2,6 +2,9 @@
 #![no_main]
 #![feature(never_type)]
 
+use numtoa::NumToA;
+
+
 use sel4cp::{protection_domain, memory_region_symbol, Channel, Handler};
 use sel4cp::debug_print;
 
@@ -41,9 +44,12 @@ fn init() -> ThisHandler {
             .unwrap(); // TODO Handle this error
         });
 
+    // `cnt` will simulate system clock
+    let cnt = 0;
     ThisHandler{
         device,
         netif,
+        cnt,
     }
 }
 
@@ -51,6 +57,7 @@ fn init() -> ThisHandler {
 struct ThisHandler{
     device: interface::EthDevice,
     netif: iface::Interface,
+    cnt: u32,
 }
 
 impl Handler for ThisHandler {
@@ -59,10 +66,11 @@ impl Handler for ThisHandler {
     fn notified(&mut self, channel: Channel) -> Result<(), Self::Error> {
         match channel {
             ETH_TEST => {
+                self.cnt = self.cnt + 100;
                 debug_print!("Got notification!\n");
 
-                test_ethernet_loopback(self);
-                //test_udp_loopback(self);
+                //test_ethernet_loopback(self);
+                test_udp_loopback(self);
                 //test_tcp_loopback(self);
             }
             _ => unreachable!(),
@@ -74,16 +82,17 @@ impl Handler for ThisHandler {
 fn test_ethernet_loopback(h: &mut ThisHandler) {
     debug_print!("Testing ethernet loopback\n");
 
-    match h.device.transmit(Instant::from_millis(0)) {
+    match h.device.transmit(Instant::from_millis(h.cnt)) {
         None => debug_print!("Didn't get a TX token\n"),
         Some(tx) => {
             debug_print!("Got a TX token\nSending some data: PING\n");
             tx.consume(4, |buffer| buffer.copy_from_slice("PING".as_ref()))
         }
     }
-
-    loop {
-        match h.device.receive(Instant::from_millis(0)) {
+    let mut x = 0;
+    while x < 10 {
+        x = x + 1;
+        match h.device.receive(Instant::from_millis(h.cnt + x)) {
             None => continue,
             Some((rx, _tx)) => {
                 rx.consume(|buffer| debug_print!("Got an RX token: {}\n", core::str::from_utf8(buffer).unwrap()));
@@ -97,6 +106,7 @@ fn test_udp_loopback(h: &mut ThisHandler) {
     debug_print!("Testing UDP loopback\n");
 
     let socket = {
+        // These values don't seem to have an effect on the number of iterations we can perform
         static mut UDP_SERVER_RX_PACKET_BUFFERS: [u8; 1024] = [0; 1024];
         static mut UDP_SERVER_RX_PACKET_METADATA: [PacketMetadata<udp::UdpMetadata>; 2] = [PacketMetadata::EMPTY; 2];
         static mut UDP_SERVER_TX_PACKET_BUFFERS: [u8; 1024] = [0; 1024];
@@ -119,11 +129,14 @@ fn test_udp_loopback(h: &mut ThisHandler) {
         addr: IpAddress::v4(127, 0, 0, 1),
         port: 9001,
     };
-    let msg = "PING";
+    //let msg = "PING";
+    //let msg = format!("{}",h.cnt);
+    let mut msg = [0u8; 4];
+    h.cnt.numtoa_str(10, &mut msg);
 
     {
         h.netif.poll(
-            Instant::from_millis(100),
+            Instant::from_millis(h.cnt),
             &mut h.device,
             &mut socket_set,
         );
@@ -134,28 +147,37 @@ fn test_udp_loopback(h: &mut ThisHandler) {
             Err(e) => debug_print!("Failed to bind UDP socket {endpoint}: {e}\n"),
         }
 
-        match socket.send_slice(msg.as_ref(), udp::UdpMetadata::from(endpoint)) {
-            Ok(()) => debug_print!("Sent a UDP packet to {endpoint}: {msg}\n"),
+        match socket.send_slice(msg[0..4].as_ref(), udp::UdpMetadata::from(endpoint)) {
+            Ok(()) => debug_print!("Sent a UDP packet to {endpoint}: {}\n",core::str::from_utf8(&msg[0..4]).unwrap()),
             Err(e) => debug_print!("Faied to send a UDP packet to {endpoint}: {e}\n"),
         }
     }
 
-    loop {
+    // NOTE: a loop is a bad idea, some other timing is needed
+    let mut x = 0;
+    while x < 10 {
+        x = x +1;
         h.netif.poll(
-            Instant::from_millis(100),
+            // we need to provide increasing timestamp, but it doesn't seem to matter how much it increases between calls
+            Instant::from_millis(h.cnt + x),
             &mut h.device,
             &mut socket_set,
         );
         let socket: &mut udp::Socket = socket_set.get_mut(handle);
 
-        if let Ok((packet, source)) = socket.recv() {
-            debug_print!("Got a UDP packet from {source}: {}\n", core::str::from_utf8(packet).unwrap());
-            break;
+        match socket.recv() {
+            Ok((packet, source)) => {
+                debug_print!("Got a UDP packet from {source}: {}\n", core::str::from_utf8(packet).unwrap());
+                break;
+            },
+            Err(_e) => {
+                //debug_print!("Error:{:?}\n",e);
+            }
         }
     }
 }
 
-fn test_tcp_loopback(h: &mut ThisHandler) {
+fn test_tcp_loopback(_h: &mut ThisHandler) {
     debug_print!("Testing TCP loopback\n");
 
     let server_socket = {
@@ -176,8 +198,8 @@ fn test_tcp_loopback(h: &mut ThisHandler) {
 
     let mut sockets: [_; 2] = Default::default();
     let mut sockets = iface::SocketSet::new(&mut sockets[..]);
-    let server_handle = sockets.add(server_socket);
-    let client_handle = sockets.add(client_socket);
+    let _server_handle = sockets.add(server_socket);
+    let _client_handle = sockets.add(client_socket);
 
     todo!()
 }

@@ -30,7 +30,9 @@
     </protection_domain>
 
     <!-- This will eventually be network stack, but it can be just a loopback for now-->
-    <protection_domain name="eth_client" priority="254" pp="true">
+    <!-- Lowering the priority for the client might be prudent, so the rest of the system responds even when
+        the client itself becomes unresponsive -->
+    <protection_domain name="eth_client" priority="250" pp="true">
         <program_image path="eth-client.elf" />
         <map mr="eth_driver_rx_used_region" vaddr="0x2_014_000" perms="rw" cached="true" setvar_vaddr="rx_used_region_start" />
         <map mr="eth_driver_rx_free_region" vaddr="0x2_010_000" perms="rw" cached="true" setvar_vaddr="rx_free_region_start" />

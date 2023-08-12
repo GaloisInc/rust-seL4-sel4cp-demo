@@ -265,14 +265,16 @@ impl phy::Device for EthDevice {
         ))
     }
 
-    fn transmit(&mut self, _timestamp: Instant) -> Option<Self::TxToken<'_>> {
+    fn transmit(&mut self, timestamp: Instant) -> Option<Self::TxToken<'_>> {
         let desc = self.tx_ring.free_mut().dequeue().ok()?;
         let buf = self.tx_bufs.as_mut_ptr().index(desc.encoded_addr());
 
         // Place the buffer to be written into the used ring; the driver won't be notified
         // until we call `consume`.
         // XXX How can we set the length?
-        let _ = self.tx_ring.used_mut().enqueue(Descriptor::new(desc.encoded_addr(), MTU as u32, 0));
+        // NOTE: using a timestamp as a cookie doesn't make a difference
+        let cookie = timestamp.total_micros().try_into().unwrap();
+        let _ = self.tx_ring.used_mut().enqueue(Descriptor::new(desc.encoded_addr(), MTU as u32, cookie));
 
         Some(Self::TxToken {
             buf,
