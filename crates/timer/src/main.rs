@@ -16,12 +16,12 @@ mod device;
 
 use device::{TtcDevice, TtcRegisterBlock};
 
-const TTC0_1: Channel = Channel::new(4);
+const TTC0_1: Channel = Channel::new(34);
 // TODO: use these channels for sub-ms timing if needed (PWD, usleep, etc)
-//const TTC0_2: Channel = Channel::new(5);
-//const TTC0_3: Channel = Channel::new(6);
+//const TTC0_2: Channel = Channel::new(35);
+//const TTC0_3: Channel = Channel::new(36);
 
-const CLIENT_1: Channel = Channel::new(7);
+const CLIENT_1: Channel = Channel::new(4);
 
 const MAX_VEC_SIZE: usize = 256;
 
@@ -92,6 +92,7 @@ impl Handler for ThisHandler {
         msg_info: MessageInfo,
     ) -> Result<MessageInfo, Self::Error> {
         if self.clients.contains(&channel) {
+            debug_print!("[Timer] Got channel {:?}!\n",channel);
             match msg_info.label().try_into().ok() /* XXX Handle errors? */ {
                 Some(TimerRequest::Sleep) => {
                     match msg_info.recv() {
@@ -114,7 +115,7 @@ impl Handler for ThisHandler {
                 },
                 Some(TimerRequest::Uptime) => {
                     // send current uptime
-                    return Ok(MessageInfo::send(TimerRequest::Uptime, UptimeValue { millis: self.ttc0.uptime_ms() }))
+                    return Ok(MessageInfo::send(TimerRequest::Uptime, UptimeValue { ms: self.ttc0.uptime_ms() }))
                 }
                 _ => {
                     debug_print!("[Timer] Unknown message label!\n",)

@@ -1,3 +1,21 @@
+//! An example how to get current Uptime from the timer:
+//! ```rust
+//! let msg_info = TIMER
+//!     .pp_call(MessageInfo::send(TimerRequest::Uptime, NoMessageValue));
+//! match msg_info.label().try_into() {
+//!    Ok(TimerRequest::Uptime) => match msg_info.recv() {
+//!        Ok(UptimeValue { ms }) => {
+//!            debug_print!("[ETH] Uptime is {} ms\n",ms);
+//!        },
+//!        Err(e) => {
+//!            debug_print!("[ETH] Message receive error {:?}\n",e);
+//!        },
+//!    }
+//!    _ => {
+//!        debug_print!("[ETH] Unexpected reply\n");
+//!    },
+//! }
+//! ```
 #![no_std]
 
 use zerocopy::{AsBytes, FromBytes};
@@ -23,5 +41,5 @@ pub struct SleepRequest {
 // automatically derive AsBytes, FromBytes for `Duration` with
 // private fields
 pub struct UptimeValue {
-    pub millis: i64,
+    pub ms: i64,
 }
