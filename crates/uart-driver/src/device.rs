@@ -1,6 +1,6 @@
 use core::ops::Deref;
 
-use tock_registers::interfaces::{Readable, Writeable, ReadWriteable};
+use tock_registers::interfaces::{Writeable};
 use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
 use tock_registers::{register_bitfields, register_structs};
 
@@ -20,6 +20,7 @@ extern "C" {
 // ZCU102 has PS UART, see https://docs.xilinx.com/r/en-US/ug1085-zynq-ultrascale-trm/Example-Read-Message-from-RXFIFO-Using-Interrupt-Method
 // UART controller section
 // or https://github.com/Xilinx/embeddedsw/tree/master/XilinxProcessorIPLib/drivers/uartps
+// NOTE: these could be simplified, since we are using FFI C calls to manage UART registers
 register_structs! {
     #[allow(non_snake_case)]
     pub UartRegisterBlock {
