@@ -19,4 +19,5 @@ fn main() {
         .args(["libgem.a", "/work/build/target/release/deps/." ])
         .output()
         .expect("failed to execute process");
+
 }

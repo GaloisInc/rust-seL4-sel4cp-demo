@@ -11,7 +11,6 @@ CFLAGS := -mcpu=$(CPU) -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall \
 	-Wno-unused-function -Werror -I$(BOARD_DIR)/include \
 	-Ic_src -Ic_src/common -I.
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lsel4cp -Tsel4cp.ld
 
 UARTPS_SRC := libuartps.c
 UARTPS_OBJS = $(UARTPS_SRC:.c=.o)

@@ -6,12 +6,11 @@ AS := $(TOOLCHAIN)-as
 AR := $(TOOLCHAIN)-ar
 
 BOARD_DIR := $(SEL4CP_SDK)/board/zcu102/debug
+$(info BOARD_DIR=${BOARD_DIR})
 
 CFLAGS := -mcpu=$(CPU) -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall \
 	-Wno-unused-function -Werror -I$(BOARD_DIR)/include \
 	-Ic_src -Ic_src/common -I.
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lsel4cp -Tsel4cp.ld
 
 GEM_SRC := libgem.c
 GEM_OBJS = $(GEM_SRC:.c=.o)
