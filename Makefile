@@ -20,7 +20,8 @@ crates := \
 	uart-driver \
 	eth-driver \
 	eth-client \
-	timer
+	timer \
+	gem
 endif
 
 sel4cp_config := debug

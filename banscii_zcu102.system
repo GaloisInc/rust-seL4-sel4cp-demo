@@ -33,8 +33,8 @@
         <map mr="ttc3_mmio" vaddr="0xFF140000" perms="rw" setvar_vaddr="ttc3_register_block" /> -->
         <!-- all irq numbers are from: https://docs.xilinx.com/r/en-US/ug1085-zynq-ultrascale-trm/System-Interrupts?tocId=PD9FTob69sVTjQEM8sOQ~g-->
         <!-- TTC 0 -->
-        <irq irq="68" id="4" />
-        <irq irq="69" id="5" />
+        <irq irq="68" id="34" />
+        <irq irq="69" id="35" />
         <irq irq="70" id="36" />
     </protection_domain>
 
@@ -52,6 +52,13 @@
         <program_image path="eth-driver.elf" />
         <!-- <map mr="eth_driver_tx_buf" vaddr="0x2_004_000" perms="rw" cached="true" setvar_vaddr="tx_buf_region_start" />
         <map mr="eth_driver_rx_buf" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="rx_buf_region_start" /> -->
+    </protection_domain>
+
+    <protection_domain name="gem" priority="253" pp="true">
+        <program_image path="gem.elf" />
+        <map mr="gem3_mmio" vaddr="0xFF0E0000" perms="rw" setvar_vaddr="gem3_register_block" />
+        <irq irq="95" id="45" />
+        <irq irq="96" id="46" />
     </protection_domain>
 
     <!-- This will eventually be network stack, but it can be just a loopback for now-->

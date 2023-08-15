@@ -16,7 +16,7 @@ mod device;
 
 use device::{TtcDevice, TtcRegisterBlock};
 
-const TTC0_1: Channel = Channel::new(4);
+const TTC0_1: Channel = Channel::new(34);
 // TODO: use these channels for sub-ms timing if needed (PWD, usleep, etc)
 //const TTC0_2: Channel = Channel::new(5);
 //const TTC0_3: Channel = Channel::new(6);
