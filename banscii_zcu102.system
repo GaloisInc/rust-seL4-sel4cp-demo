@@ -20,10 +20,14 @@
 
     <memory_region name="eth_driver_tx_buf" size="0x4_000" />
     <memory_region name="eth_driver_rx_buf" size="0x4_000" />
+    <memory_region name="eth_driver_tx_free_region" size="0x4_000" />
+    <memory_region name="eth_driver_tx_used_region" size="0x4_000" />
+    <memory_region name="eth_driver_rx_free_region" size="0x4_000" />
+    <memory_region name="eth_driver_rx_used_region" size="0x4_000" />
 
     <!-- Protection domains -->
     <!-- Timer -->
-    <protection_domain name="timer" priority="254" pp="false">
+    <protection_domain name="timer" priority="254" pp="true">
         <program_image path="timer.elf" />
         <!-- The TTC clock is at 100MHz -->
         <map mr="ttc0_mmio" vaddr="0xFF110000" perms="rw" setvar_vaddr="ttc0_register_block" />
@@ -33,8 +37,8 @@
         <map mr="ttc3_mmio" vaddr="0xFF140000" perms="rw" setvar_vaddr="ttc3_register_block" /> -->
         <!-- all irq numbers are from: https://docs.xilinx.com/r/en-US/ug1085-zynq-ultrascale-trm/System-Interrupts?tocId=PD9FTob69sVTjQEM8sOQ~g-->
         <!-- TTC 0 -->
-        <irq irq="68" id="4" />
-        <irq irq="69" id="5" />
+        <irq irq="68" id="34" />
+        <irq irq="69" id="35" />
         <irq irq="70" id="36" />
     </protection_domain>
 
@@ -48,16 +52,25 @@
     </protection_domain>
 
     <!-- TBD -->
-    <protection_domain name="eth_driver" priority="253" pp="true">
+    <protection_domain name="eth_driver" priority="254" pp="true">
         <program_image path="eth-driver.elf" />
-        <!-- <map mr="eth_driver_tx_buf" vaddr="0x2_004_000" perms="rw" cached="true" setvar_vaddr="tx_buf_region_start" />
-        <map mr="eth_driver_rx_buf" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="rx_buf_region_start" /> -->
+        <map mr="eth_driver_rx_used_region" vaddr="0x2_014_000" perms="rw" cached="true" setvar_vaddr="rx_used_region_start" />
+        <map mr="eth_driver_rx_free_region" vaddr="0x2_010_000" perms="rw" cached="true" setvar_vaddr="rx_free_region_start" />
+        <map mr="eth_driver_tx_used_region" vaddr="0x2_00c_000" perms="rw" cached="true" setvar_vaddr="tx_used_region_start" />
+        <map mr="eth_driver_tx_free_region" vaddr="0x2_008_000" perms="rw" cached="true" setvar_vaddr="tx_free_region_start" />
+        <map mr="eth_driver_tx_buf" vaddr="0x2_004_000" perms="rw" cached="true" setvar_vaddr="tx_buf_region_start" />
+        <map mr="eth_driver_rx_buf" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="rx_buf_region_start" />
     </protection_domain>
 
     <!-- This will eventually be network stack, but it can be just a loopback for now-->
-    <!-- TBD -->
-    <protection_domain name="eth_client" priority="253" pp="true">
+    <!-- Lowering the priority for the client might be prudent, so the rest of the system responds even when
+        the client itself becomes unresponsive -->
+    <protection_domain name="eth_client" priority="250" pp="true">
         <program_image path="eth-client.elf" />
+        <map mr="eth_driver_rx_used_region" vaddr="0x2_014_000" perms="rw" cached="true" setvar_vaddr="rx_used_region_start" />
+        <map mr="eth_driver_rx_free_region" vaddr="0x2_010_000" perms="rw" cached="true" setvar_vaddr="rx_free_region_start" />
+        <map mr="eth_driver_tx_used_region" vaddr="0x2_00c_000" perms="rw" cached="true" setvar_vaddr="tx_used_region_start" />
+        <map mr="eth_driver_tx_free_region" vaddr="0x2_008_000" perms="rw" cached="true" setvar_vaddr="tx_free_region_start" />
         <map mr="eth_driver_tx_buf" vaddr="0x2_004_000" perms="rw" cached="true" setvar_vaddr="tx_buf_region_start" />
         <map mr="eth_driver_rx_buf" vaddr="0x2_000_000" perms="rw" cached="true" setvar_vaddr="rx_buf_region_start" />
     </protection_domain>
@@ -93,6 +106,11 @@
     <channel>
         <end pd="assistant" id="3" />
         <end pd="eth_client" id="3" />
+    </channel>
+
+    <channel>
+        <end pd="timer" id="4" />
+        <end pd="eth_client" id="4" />
     </channel>
 
 </system>

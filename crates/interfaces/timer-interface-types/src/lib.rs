@@ -23,5 +23,5 @@ pub struct SleepRequest {
 // automatically derive AsBytes, FromBytes for `Duration` with
 // private fields
 pub struct UptimeValue {
-    pub millis: i64,
+    pub ms: i64,
 }

@@ -3,6 +3,8 @@
 #![feature(never_type)]
 
 use numtoa::NumToA;
+use timer_interface_types::*;
+use sel4cp::message::{MessageInfo, NoMessageValue, StatusMessageLabel, NoMessageLabel};
 
 
 use sel4cp::{protection_domain, memory_region_symbol, Channel, Handler};
@@ -20,6 +22,7 @@ use smoltcp::iface;
 
 const DRIVER: Channel = Channel::new(2);
 const ETH_TEST: Channel = Channel::new(3);
+const TIMER: Channel = Channel::new(4);
 
 #[protection_domain]
 fn init() -> ThisHandler {
@@ -67,10 +70,27 @@ impl Handler for ThisHandler {
         match channel {
             ETH_TEST => {
                 self.cnt = self.cnt + 100;
+
                 debug_print!("Got notification!\n");
+                let mut x: usize = 0;
+                while x < 5000000000 {
+                    x = x+1;
+                    if x % 100000000 == 0 {
+                        // ask a timer
+                        let msg_info = TIMER.pp_call(MessageInfo::send(
+                            NoMessageLabel,
+                            UptimeValue { ms: 0}
+                        ));
+                        assert_eq!(msg_info.label().try_into(), Ok(StatusMessageLabel::Ok));
+
+                        let msg = msg_info.recv::<UptimeValue>().unwrap();
+                        debug_print!("[{}] counted: {}\n",msg.ms,x);
+                    }
+                }
+                debug_print!("done!\n");
 
                 //test_ethernet_loopback(self);
-                test_udp_loopback(self);
+                //test_udp_loopback(self);
                 //test_tcp_loopback(self);
             }
             _ => unreachable!(),

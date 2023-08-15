@@ -247,6 +247,7 @@ dependencies = [
  "sel4-shared-ring-buffer",
  "sel4cp",
  "smoltcp",
+ "timer-interface-types",
 ]
 
 [[package]]

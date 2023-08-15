@@ -16,12 +16,13 @@ mod device;
 
 use device::{TtcDevice, TtcRegisterBlock};
 
-const TTC0_1: Channel = Channel::new(4);
+const TTC0_1: Channel = Channel::new(34);
 // TODO: use these channels for sub-ms timing if needed (PWD, usleep, etc)
 //const TTC0_2: Channel = Channel::new(5);
 //const TTC0_3: Channel = Channel::new(6);
 
-const CLIENT_1: Channel = Channel::new(7);
+// Simulating a client, currently a ETH client
+const CLIENT_1: Channel = Channel::new(4);
 
 const MAX_VEC_SIZE: usize = 256;
 
@@ -91,38 +92,76 @@ impl Handler for ThisHandler {
         channel: Channel,
         msg_info: MessageInfo,
     ) -> Result<MessageInfo, Self::Error> {
-        if self.clients.contains(&channel) {
-            match msg_info.label().try_into().ok() /* XXX Handle errors? */ {
-                Some(TimerRequest::Sleep) => {
-                    match msg_info.recv() {
-                        Ok(SleepRequest { ms }) => {
-                            if self.alarms.is_full() {
-                                // return an error
-                                return Ok(MessageInfo::send(StatusMessageLabel::Error, NoMessageValue))
-                            } else {
-                                // insert a new alarm
-                                self.alarms.push((channel, Duration::milliseconds(self.ttc0.uptime_ms() + ms))).unwrap();
-                                // sort the alarm time in ascending order
-                                self.alarms.sort_unstable_by(|(_,a1), (_,a2)| a1.cmp(a2));
-                                return Ok(MessageInfo::send(StatusMessageLabel::Ok, NoMessageValue))
-                            }
-                        },
-                        _ => {
-                            debug_print!("[Timer] Error getting SleepRequest\n",)
-                        },
+        Ok(
+            match channel {
+                CLIENT_1 => match msg_info.recv::<UptimeValue>() {
+                    Ok(msg) => { 
+                        MessageInfo::send(
+                            StatusMessageLabel::Ok,
+                            UptimeValue {
+                                ms: self.ttc0.uptime_ms()
+                            })
+
                     }
-                },
-                Some(TimerRequest::Uptime) => {
-                    // send current uptime
-                    return Ok(MessageInfo::send(TimerRequest::Uptime, UptimeValue { millis: self.ttc0.uptime_ms() }))
+                    Err(_) => MessageInfo::send(StatusMessageLabel::Error, NoMessageValue),
                 }
                 _ => {
-                    debug_print!("[Timer] Unknown message label!\n",)
-                },
+                    unreachable!()
+                }
             }
-        } else {
-            debug_print!("[Timer] Unexpected channel!\n",)
-        }
-        Ok(MessageInfo::send(NoMessageLabel, NoMessageValue))
+        )
+        // if self.clients.contains(&channel) {
+        //     match msg_info.recv::<UptimeValue>() {
+        //         Ok(_) => {
+        //             return Ok(MessageInfo::send(
+        //                 StatusMessageLabel::Ok,
+        //                 UptimeValue {
+        //                     ms: self.ttc0.uptime_ms()
+        //                 }
+        //             ));
+        //         }
+        //         Err(_) => {
+        //             return Ok(MessageInfo::send(StatusMessageLabel::Error, NoMessageValue));
+        //         }
+        //     }
+        //     // TODO: properly 
+        //     // match msg_info.label().try_into().ok() /* XXX Handle errors? */ {
+        //     //     Some(TimerRequest::Sleep) => {
+        //     //         match msg_info.recv() {
+        //     //             Ok(SleepRequest { ms }) => {
+        //     //                 if self.alarms.is_full() {
+        //     //                     // return an error
+        //     //                     return Ok(MessageInfo::send(StatusMessageLabel::Error, NoMessageValue))
+        //     //                 } else {
+        //     //                     // insert a new alarm
+        //     //                     self.alarms.push((channel, Duration::milliseconds(self.ttc0.uptime_ms() + ms))).unwrap();
+        //     //                     // sort the alarm time in ascending order
+        //     //                     self.alarms.sort_unstable_by(|(_,a1), (_,a2)| a1.cmp(a2));
+        //     //                     return Ok(MessageInfo::send(StatusMessageLabel::Ok, NoMessageValue))
+        //     //                 }
+        //     //             },
+        //     //             _ => {
+        //     //                 debug_print!("[Timer] Error getting SleepRequest\n",)
+        //     //             },
+        //     //         }
+        //     //     },
+        //     //     Some(TimerRequest::Uptime) => {
+        //     //         // send current uptime
+        //     //         return Ok(MessageInfo::send(TimerRequest::Uptime, UptimeValue { millis: self.ttc0.uptime_ms() }))
+        //     //     }
+        //     //     _ => {
+        //     //         debug_print!("[Timer] Unknown message label!\n",)
+        //     //     },
+        //     // }
+        // } else {
+        //     debug_print!("[Timer] Unexpected channel!\n",)
+        // }
+        // //return Ok(MessageInfo::send(NoMessageLabel, NoMessageValue));
+        // Ok(MessageInfo::send(
+        //     StatusMessageLabel::Ok,
+        //     UptimeValue {
+        //         ms: 100
+        //     }
+        // ))
     }
 }
