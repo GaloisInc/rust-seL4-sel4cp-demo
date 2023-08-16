@@ -194,25 +194,48 @@ impl EthDevice {
 
 pub struct TxToken<'a> {
     buf: ExternallySharedPtr<'a, Buf, ReadWrite>,
-    channel: Channel
+    desc: Descriptor,
+    timestamp: Instant,
+    tx_free: RingBuffer<'a>,
+    tx_used: RingBuffer<'a>,
+    channel: Channel,
 }
 
-// TODO Implement Drop to put the buffer back
+impl<'a> Drop for TxToken<'a> {
+    /// Zero out the buffer and put it back in the free ring
+    fn drop(&mut self) {
+        // Safety: This is safe because we are the only thread using this
+        // descriptor, and thus this buffer.
+        let buf_mut = unsafe { self.buf.as_raw_ptr().as_mut() };
+        buf_mut.clear();
+
+        let _ = self.tx_free.enqueue(Descriptor::new(self.desc.encoded_addr(), MTU as u32, 0));
+    }
+}
 
 impl<'a> phy::TxToken for TxToken<'a> {
-    fn consume<R, F: FnOnce(&mut [u8]) -> R>(self, length: usize, f: F) -> R {
+    fn consume<R, F: FnOnce(&mut [u8]) -> R>(mut self, length: usize, f: F) -> R {
         let mut buf = Buf::default();
 
         buf.extend(core::iter::repeat(0).take(length));
         let res = f(&mut buf);
 
-        // XXX Can we do this withoug the unsafe?
+        // Safety: This is safe because we are the only thread using this
+        // descriptor, and thus this buffer.
         let buf_mut = unsafe { self.buf.as_raw_ptr().as_mut() };
         buf_mut.clear();
         let _ = buf_mut.extend_from_slice(&buf);
         let _ = buf_mut.resize(length, 0);
 
+        // TODO Lock TX free ring
+        let _ = self.tx_used.enqueue(Descriptor::new(self.desc.encoded_addr(), MTU as u32, 0));
+        // TODO unlock
+
+        // Notify the driver that there's a frame to be sent
         self.channel.notify();
+
+        // Ensure no call to drop
+        core::mem::forget(self);
 
         res
     }
@@ -221,8 +244,6 @@ impl<'a> phy::TxToken for TxToken<'a> {
 pub struct RxToken {
     buf: Buf,
 }
-
-// TODO Implement Drop to put the buffer back
 
 impl phy::RxToken for RxToken {
     fn consume<R, F: FnOnce(&mut [u8]) -> R>(mut self, f: F) -> R {
@@ -235,16 +256,29 @@ impl phy::Device for EthDevice {
     type RxToken<'a> = RxToken;
 
     fn receive(&mut self, timestamp: Instant) -> Option<(Self::RxToken<'_>, Self::TxToken<'_>)> {
-        // Ensure we don't take a TX buffer if there's nothing to receive
-        if self.rx_ring.used().is_empty() {
+        // TODO: Lock TX free ring and RX used ring
+
+        // Ensure we don't take an RX buffer if no TX buffers are available
+        if self.tx_ring.free().is_empty() {
             return None;
         }
 
-        let rx_desc = self.rx_ring.used_mut().dequeue().ok()?; // Should succeed; we just checked
+        let rx_desc = self.rx_ring.used_mut().dequeue().ok()?;
+        let tx_desc = self.tx_ring.free_mut().dequeue().ok()?;
+
+        // TODO unlock
+
+        let tx_buf = self.tx_bufs.as_mut_ptr().index(tx_desc.encoded_addr());
+
+        // Safety: This is safe because we protect access to these rings with
+        // a mutex
+        let tx_free = unsafe { core::ptr::read(self.tx_ring.free()) };
+        let tx_used = unsafe { core::ptr::read(self.tx_ring.used()) };
 
         // Copy the buffer and put it back. This avoids needing to notify on read.
-        // XXX Can we do this without copying? Without protected calls?
-        // XXX Can we do this withoug the unsafe?
+        //
+        // Safety: This is safe because we are the only thread with the descriptor
+        // corresponding to this RX buffer, and the buffers are disjoint.
         let rx_buf = unsafe {
             self.rx_bufs
                 .as_ptr()
@@ -253,31 +287,45 @@ impl phy::Device for EthDevice {
                 .as_ref()
                 .clone()
         };
-        let _ = self.rx_ring.free_mut().enqueue(Descriptor::new(rx_desc.encoded_addr(), MTU as u32, 0));
 
-        let tx_token = self.transmit(timestamp)?;
+        // TODO Lock RX free ring
+        let _ = self.rx_ring.free_mut().enqueue(Descriptor::new(rx_desc.encoded_addr(), MTU as u32, 0));
+        // TODO unlock
 
         Some((
             Self::RxToken {
                 buf: rx_buf,
             },
-            tx_token,
+            Self::TxToken {
+                buf: tx_buf,
+                desc: tx_desc,
+                timestamp,
+                tx_free,
+                tx_used,
+                channel: self.channel,
+            },
         ))
     }
 
     fn transmit(&mut self, timestamp: Instant) -> Option<Self::TxToken<'_>> {
+        // Reserve a TX buffer and give it to the client
+        // TODO Lock TX free ring
         let desc = self.tx_ring.free_mut().dequeue().ok()?;
+        // TODO unlock
+
         let buf = self.tx_bufs.as_mut_ptr().index(desc.encoded_addr());
 
-        // Place the buffer to be written into the used ring; the driver won't be notified
-        // until we call `consume`.
-        // XXX How can we set the length?
-        // NOTE: using a timestamp as a cookie doesn't make a difference
-        let cookie = timestamp.total_micros().try_into().unwrap();
-        let _ = self.tx_ring.used_mut().enqueue(Descriptor::new(desc.encoded_addr(), MTU as u32, cookie));
+        // Safety: This is safe because we protect access to these rings with
+        // a mutex
+        let tx_free = unsafe { core::ptr::read(self.tx_ring.free()) };
+        let tx_used = unsafe { core::ptr::read(self.tx_ring.used()) };
 
         Some(Self::TxToken {
             buf,
+            desc,
+            timestamp,
+            tx_free,
+            tx_used,
             channel: self.channel,
         })
     }

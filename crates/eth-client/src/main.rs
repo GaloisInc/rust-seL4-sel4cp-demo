@@ -2,9 +2,6 @@
 #![no_main]
 #![feature(never_type)]
 
-use numtoa::NumToA;
-
-
 use sel4cp::{protection_domain, memory_region_symbol, Channel, Handler};
 use sel4cp::debug_print;
 
@@ -20,6 +17,8 @@ use smoltcp::iface;
 
 const DRIVER: Channel = Channel::new(2);
 const ETH_TEST: Channel = Channel::new(3);
+
+const PING: [u8; 4] = ['P' as u8, 'I' as u8, 'N' as u8, 'G' as u8];
 
 #[protection_domain]
 fn init() -> ThisHandler {
@@ -69,9 +68,12 @@ impl Handler for ThisHandler {
                 self.cnt = self.cnt + 100;
                 debug_print!("Got notification!\n");
 
-                //test_ethernet_loopback(self);
-                test_udp_loopback(self);
-                //test_tcp_loopback(self);
+                for i in 0..7 {
+                    debug_print!("Attempt {i}\n");
+                    //test_ethernet_loopback(self);
+                    test_udp_loopback(self);
+                    //test_tcp_loopback(self);
+                }
             }
             _ => unreachable!(),
         }
@@ -82,14 +84,14 @@ impl Handler for ThisHandler {
 fn test_ethernet_loopback(h: &mut ThisHandler) {
     debug_print!("Testing ethernet loopback\n");
 
-    let mut msg = [0u8; 4];
-    h.cnt.numtoa_str(10, &mut msg);
-
     match h.device.transmit(Instant::from_millis(h.cnt)) {
         None => debug_print!("[test_ethernet_loopback] Didn't get a TX token\n"),
         Some(tx) => {
-            debug_print!("[test_ethernet_loopback] Got a TX token\nSending some data: {}\n",core::str::from_utf8(&msg).unwrap());
-            tx.consume(4, |buffer| buffer.copy_from_slice(msg.as_ref()))
+            debug_print!(
+                "[test_ethernet_loopback] Got a TX token\nSending some data: {}\n",
+                core::str::from_utf8(&PING).unwrap(),
+            );
+            tx.consume(4, |buffer| buffer.copy_from_slice(PING.as_ref()))
         }
     }
     let mut x = 0;
@@ -98,13 +100,19 @@ fn test_ethernet_loopback(h: &mut ThisHandler) {
         match h.device.receive(Instant::from_millis(h.cnt + x)) {
             None => {
                 if x == 9 {
-                    debug_print!("[test_ethernet_loopback] Nothing was received:-(");
+                    debug_print!("[test_ethernet_loopback] Nothing was received :-(\n");
                 } else {
                     continue
                 }
             },
             Some((rx, _tx)) => {
-                rx.consume(|buffer| debug_print!("[test_ethernet_loopback] Got an RX token of length {}: {}\n", buffer.len(), core::str::from_utf8(buffer).unwrap()));
+                rx.consume(|buffer|
+                    debug_print!(
+                        "[test_ethernet_loopback] Got an RX token of length {}: {}\n",
+                        buffer.len(),
+                        core::str::from_utf8(buffer).unwrap(),
+                    )
+                );
                 break;
             }
         }
@@ -138,10 +146,6 @@ fn test_udp_loopback(h: &mut ThisHandler) {
         addr: IpAddress::v4(127, 0, 0, 1),
         port: 9001,
     };
-    //let msg = "PING";
-    //let msg = format!("{}",h.cnt);
-    let mut msg = [0u8; 4];
-    h.cnt.numtoa_str(10, &mut msg);
 
     {
         h.netif.poll(
@@ -156,16 +160,17 @@ fn test_udp_loopback(h: &mut ThisHandler) {
             Err(e) => debug_print!("Failed to bind UDP socket {endpoint}: {e}\n"),
         }
 
-        match socket.send_slice(msg[0..4].as_ref(), udp::UdpMetadata::from(endpoint)) {
-            Ok(()) => debug_print!("Sent a UDP packet to {endpoint}: {}\n",core::str::from_utf8(&msg[0..4]).unwrap()),
+        match socket.send_slice(PING[..].as_ref(), udp::UdpMetadata::from(endpoint)) {
+            Ok(()) => debug_print!(
+                "Sent a UDP packet to {endpoint}: {}\n",
+                core::str::from_utf8(&PING[..]).unwrap(),
+            ),
             Err(e) => debug_print!("Faied to send a UDP packet to {endpoint}: {e}\n"),
         }
     }
 
     // NOTE: a loop is a bad idea, some other timing is needed
-    let mut x = 0;
-    while x < 10 {
-        x = x +1;
+    for x in 0..10 {
         h.netif.poll(
             // we need to provide increasing timestamp, but it doesn't seem to matter how much it increases between calls
             Instant::from_millis(h.cnt + x),

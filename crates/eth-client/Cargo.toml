@@ -10,4 +10,3 @@ sel4cp.workspace = true
 sel4-shared-ring-buffer.workspace = true
 eth-driver-interface = { path = "../interfaces/ethernet-interface-types" }
 smoltcp = { version = "0.10.0", default-features = false, features = ["log","proto-ipv4","socket-tcp","socket-udp","medium-ethernet","medium-ip"] }
-numtoa = "0.2.4"
