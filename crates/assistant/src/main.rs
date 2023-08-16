@@ -22,7 +22,8 @@ use embedded_hal::serial::{Read as SerialRead, Write as SerialWrite};
 
 const UART_DRIVER: Channel = Channel::new(0);
 const TALENT: Channel = Channel::new(1);
-const ETH_TEST: Channel = Channel::new(3);
+const ETH_CLIENT: Channel = Channel::new(3);
+const ETH_CLIENT_REMOTE: Channel = Channel::new(6);
 
 const REGION_SIZE: usize = 0x4_000;
 
@@ -72,7 +73,9 @@ impl Handler for ThisHandler {
                         self.try_create();
                     }
                     prompt(&mut self.serial);
-                    ETH_TEST.notify(); // ping the ethernet client upon each non-newline keystroke
+                    ETH_CLIENT.notify(); // ping the ethernet client upon each non-newline keystroke
+                    // This is just for debugging, if you need to trigger the other side
+                    //ETH_CLIENT_REMOTE.notify(); // ping the ethernet client upon each non-newline keystroke
                 } else {
                     let c = char::from(b);
                     if c.is_ascii() && !c.is_ascii_control() {

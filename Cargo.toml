@@ -9,7 +9,9 @@ members = [
     "crates/pl011-driver",
     "crates/uart-driver",
     "crates/eth-driver",
+    "crates/eth-driver-remote",
     "crates/eth-client",
+    "crates/eth-client-remote",
     "crates/timer",
 ]
 

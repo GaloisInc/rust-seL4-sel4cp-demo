@@ -249,6 +249,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "eth-client-remote"
+version = "0.1.0"
+dependencies = [
+ "eth-driver-interface",
+ "sel4-shared-ring-buffer",
+ "sel4cp",
+ "smoltcp",
+]
+
+[[package]]
 name = "eth-driver"
 version = "0.1.0"
 dependencies = [
@@ -265,6 +275,15 @@ dependencies = [
  "sel4-shared-ring-buffer",
  "sel4cp",
  "smoltcp",
+]
+
+[[package]]
+name = "eth-driver-remote"
+version = "0.1.0"
+dependencies = [
+ "eth-driver-interface",
+ "sel4-shared-ring-buffer",
+ "sel4cp",
 ]
 
 [[package]]

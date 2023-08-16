@@ -10,6 +10,8 @@ crates := \
 	banscii-assistant \
 	banscii-pl011-driver \
 	eth-driver \
+	eth-driver-remote \
+	eth-client-remote \
 	eth-client
 else
 sel4cp_board := zcu102
