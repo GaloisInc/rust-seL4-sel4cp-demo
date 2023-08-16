@@ -71,8 +71,8 @@ impl Handler for ThisHandler {
                 for i in 0..7 {
                     debug_print!("Attempt {i}\n");
                     //test_ethernet_loopback(self);
-                    test_udp_loopback(self);
-                    //test_tcp_loopback(self);
+                    //test_udp_loopback(self);
+                    test_tcp_loopback(self);
                 }
             }
             _ => unreachable!(),
@@ -194,7 +194,7 @@ fn test_udp_loopback(h: &mut ThisHandler) {
     }
 }
 
-fn test_tcp_loopback(_h: &mut ThisHandler) {
+fn test_tcp_loopback(h: &mut ThisHandler) {
     debug_print!("Testing TCP loopback\n");
 
     let server_socket = {
@@ -215,8 +215,61 @@ fn test_tcp_loopback(_h: &mut ThisHandler) {
 
     let mut sockets: [_; 2] = Default::default();
     let mut sockets = iface::SocketSet::new(&mut sockets[..]);
-    let _server_handle = sockets.add(server_socket);
-    let _client_handle = sockets.add(client_socket);
+    let server_handle = sockets.add(server_socket);
+    let client_handle = sockets.add(client_socket);
 
-    todo!()
+    let endpoint = IpEndpoint {
+        addr: IpAddress::v4(127, 0, 0, 1),
+        port: 9001,
+    };
+
+    let mut did_listen = false;
+    let mut did_connect = false;
+    let mut done = false;
+    while !done {
+        h.netif.poll(Instant::from_millis(100), &mut h.device, &mut sockets);
+
+        let socket = sockets.get_mut::<tcp::Socket>(server_handle);
+        if !socket.is_active() && !socket.is_listening() {
+            if !did_listen {
+                debug_print!("Listening on {endpoint}\n");
+                socket.listen(endpoint).unwrap();
+                did_listen = true;
+            }
+        }
+
+        if socket.can_recv() {
+            debug_print!(
+                "Got a TCP packet: {:?}\n",
+                socket.recv(|buffer| { (buffer.len(), core::str::from_utf8(buffer).unwrap()) })
+            );
+            socket.close();
+            done = true;
+        }
+
+        let socket = sockets.get_mut::<tcp::Socket>(client_handle);
+        let cx = h.netif.context();
+        if !socket.is_open() {
+            if !did_connect {
+                debug_print!("Connecting to {endpoint}\n");
+                socket
+                    .connect(cx, endpoint, 65000)
+                    .unwrap();
+                did_connect = true;
+            }
+        }
+
+        if socket.can_send() {
+            match socket.send_slice(PING[..].as_ref()) {
+                Ok(n) => debug_print!(
+                    "Sent a TCP packet to {endpoint}: {}\n",
+                    core::str::from_utf8(&PING[..n]).unwrap(),
+                ),
+                Err(e) => debug_print!("Faied to send a TCP packet to {endpoint}: {e}\n"),
+            }
+            socket.close();
+        }
+    }
+
+    debug_print!("Done testing TCP loopback\n")
 }
