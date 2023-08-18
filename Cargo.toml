@@ -11,6 +11,7 @@ members = [
     "crates/eth-driver",
     "crates/eth-client",
     "crates/timer",
+    "crates/gem",
 ]
 
 [workspace.dependencies]

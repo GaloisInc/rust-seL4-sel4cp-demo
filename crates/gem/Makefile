@@ -11,14 +11,14 @@ CFLAGS := -mcpu=$(CPU) -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall \
 	-Wno-unused-function -Werror -I$(BOARD_DIR)/include \
 	-Ic_src -Ic_src/common -I.
 
-UARTPS_SRC := libuartps.c
-UARTPS_OBJS = $(UARTPS_SRC:.c=.o)
+GEM_SRC := libgem.c
+GEM_OBJS = $(GEM_SRC:.c=.o)
 
 DRIVER_SRC := $(wildcard c_src/*.c) $(wildcard c_src/common/*.c)
 DRIVER_OBJ := $(DRIVER_SRC:.c=.o)
-OBJS = $(DRIVER_OBJ) $(UARTPS_OBJS)
+OBJS = $(DRIVER_OBJ) $(GEM_OBJS)
 
-all: libuartps.a
+all: libgem.a
 
 clean:
 	rm -rf *.o *.a
@@ -30,5 +30,5 @@ clean:
 %.o: %.s
 	$(AS) -g3 -mcpu=$(CPU) $< -o $@
 
-libuartps.a: $(OBJS)
+libgem.a: $(OBJS)
 	$(AR) -r $@ $?

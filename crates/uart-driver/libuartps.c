@@ -54,7 +54,6 @@ void Handler(void *CallBackRef, u32 Event, unsigned int EventData)
 
 	/* All of the data has been received */
 	if (Event == XUARTPS_EVENT_RECV_DATA) {
-		//sel4cp_dbg_puts("Received data\n");
 		TotalReceivedCount = EventData;
 	}
 
