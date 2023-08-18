@@ -7,6 +7,7 @@ license = "BSD-2-Clause"
 
 [dependencies]
 sel4cp = { workspace = true, features = ["alloc"] }
+sel4-externally-shared = { workspace = true, features = ["unstable", "alloc"]}
 banscii-artist-interface-types = { path = "./interface-types" }
 rsa = { version = "0.8.1", default-features = false, features = ["pem", "sha2"] }
 

@@ -2,6 +2,9 @@
 #![no_main]
 #![feature(never_type)]
 
+extern crate alloc;
+
+
 use sel4cp::{protection_domain, memory_region_symbol, Channel, Handler};
 use sel4cp::debug_print;
 

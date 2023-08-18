@@ -2,13 +2,13 @@
 #![no_main]
 #![feature(never_type)]
 
-use sel4cp::{protection_domain, memory_region_symbol, Channel};
-#[allow(unused_imports)]
+use sel4cp::{protection_domain, memory_region_symbol, Channel, Handler};
+
 use eth_driver_interface as interface;
 
 const CLIENT: Channel = Channel::new(5);
 
-// TODO: connect with `eth-driver`
+// TODO: connect with `eth-driver-remote`
 
 #[protection_domain]
 fn init() -> interface::EthHandler {

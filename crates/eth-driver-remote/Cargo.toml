@@ -6,6 +6,8 @@ edition = "2021"
 license = "BSD-2-Clause"
 
 [dependencies]
-sel4cp.workspace = true
+sel4cp = { workspace = true, features = ["alloc"] }
+sel4-externally-shared = { workspace = true, features = ["unstable", "alloc"]}
 sel4-shared-ring-buffer.workspace = true
 eth-driver-interface = { path = "../interfaces/ethernet-interface-types" }
+sel4-bounce-buffer-allocator.workspace = true

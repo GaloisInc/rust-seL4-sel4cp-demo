@@ -6,8 +6,10 @@ edition = "2021"
 license = "BSD-2-Clause"
 
 [dependencies]
-sel4cp.workspace = true
+sel4cp = { workspace = true, features = ["alloc"] }
+sel4-externally-shared = { workspace = true, features = ["unstable", "alloc"]}
 sel4-shared-ring-buffer.workspace = true
+sel4-bounce-buffer-allocator.workspace = true
 
-smoltcp = { version = "0.10.0", default-features = false, features = ["proto-ipv4","medium-ethernet","socket-raw"] }
+smoltcp = { version = "0.10.0", default-features = false, features = ["proto-ipv4","medium-ethernet","socket-raw","alloc"] }
 heapless = "0.7.16"

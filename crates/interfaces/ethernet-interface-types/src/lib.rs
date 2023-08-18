@@ -2,7 +2,13 @@
 #![feature(never_type)]
 
 use sel4cp::{Channel, Handler, debug_print};
-use sel4cp::memory_region::{ExternallySharedRef, ExternallySharedPtr, ReadWrite};
+
+use sel4_externally_shared::{
+    access::ReadWrite,
+    ExternallySharedRef,
+    ExternallySharedPtr
+};
+
 use sel4_shared_ring_buffer::{RingBuffers, RingBuffer, Descriptor};
 use smoltcp::{phy, time::Instant};
 
