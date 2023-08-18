@@ -1,5 +1,5 @@
 [package]
-name = "eth-driver-remote"
+name = "point-to-point-phy"
 version = "0.1.0"
 authors = ["Ben Hamlin <hamlinb@galois.com>"]
 edition = "2021"
@@ -9,5 +9,5 @@ license = "BSD-2-Clause"
 sel4cp.workspace = true
 sel4-shared-ring-buffer.workspace = true
 eth-driver-interface = { path = "../interfaces/ethernet-interface-types" }
-point-to-point-phy = { path = "../point-to-point-phy" }
+smoltcp = { version = "0.10.0", default-features = false, features = ["proto-ipv4","medium-ethernet","socket-raw"] }
 heapless = "0.7.16"

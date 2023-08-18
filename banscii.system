@@ -20,6 +20,9 @@
     <memory_region name="remote_eth_driver_rx_free_region" size="0x4_000" />
     <memory_region name="remote_eth_driver_rx_used_region" size="0x4_000" />
 
+    <memory_region name="eth_driver_to_remote_eth_driver" size="0x4_000" />
+    <memory_region name="remote_eth_driver_to_eth_driver" size="0x4_000" />
+
     <protection_domain name="pl011_driver" priority="254" pp="true">
         <program_image path="banscii-pl011-driver.elf" />
         <map mr="pl011_mmio" vaddr="0x2000000" perms="rw" setvar_vaddr="pl011_register_block" />
@@ -28,6 +31,9 @@
 
     <protection_domain name="eth_driver" priority="254" pp="true">
         <program_image path="eth-driver.elf" />
+        <map mr="eth_driver_to_remote_eth_driver" vaddr="0x2_022_000" perms="rw" cached="true" setvar_vaddr="to_remote" />
+        <map mr="remote_eth_driver_to_eth_driver" vaddr="0x2_018_000" perms="rw" cached="true" setvar_vaddr="from_remote" />
+
         <map mr="eth_driver_rx_used_region" vaddr="0x2_014_000" perms="rw" cached="true" setvar_vaddr="rx_used_region_start" />
         <map mr="eth_driver_rx_free_region" vaddr="0x2_010_000" perms="rw" cached="true" setvar_vaddr="rx_free_region_start" />
         <map mr="eth_driver_tx_used_region" vaddr="0x2_00c_000" perms="rw" cached="true" setvar_vaddr="tx_used_region_start" />
@@ -48,6 +54,9 @@
 
     <protection_domain name="eth_driver_remote" priority="254" pp="true">
         <program_image path="eth-driver-remote.elf" />
+        <map mr="eth_driver_to_remote_eth_driver" vaddr="0x2_022_000" perms="rw" cached="true" setvar_vaddr="from_local" />
+        <map mr="remote_eth_driver_to_eth_driver" vaddr="0x2_018_000" perms="rw" cached="true" setvar_vaddr="to_local" />
+
         <map mr="remote_eth_driver_rx_used_region" vaddr="0x2_014_000" perms="rw" cached="true" setvar_vaddr="rx_used_region_start" />
         <map mr="remote_eth_driver_rx_free_region" vaddr="0x2_010_000" perms="rw" cached="true" setvar_vaddr="rx_free_region_start" />
         <map mr="remote_eth_driver_tx_used_region" vaddr="0x2_00c_000" perms="rw" cached="true" setvar_vaddr="tx_used_region_start" />

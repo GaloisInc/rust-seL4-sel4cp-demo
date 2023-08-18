@@ -18,7 +18,7 @@ use smoltcp::iface;
 const DRIVER: Channel = Channel::new(5);
 const ETH_TEST: Channel = Channel::new(6);
 
-const PING: [u8; 4] = ['G' as u8, 'N' as u8, 'I' as u8, 'P' as u8];
+const PONG: [u8; 4] = ['P' as u8, 'O' as u8, 'N' as u8, 'G' as u8];
 
 #[protection_domain]
 fn init() -> ThisHandler {
