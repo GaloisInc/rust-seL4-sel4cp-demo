@@ -51,6 +51,7 @@ fn init() -> impl Handler {
         region_out,
         serial,
         buffer: Vec::new(),
+        turn: 0,
     }
 }
 
@@ -59,6 +60,7 @@ struct ThisHandler {
     region_out: ExternallySharedRef<'static, [u8], ReadWrite>,
     serial: driver::SerialDriver,
     buffer: Vec<u8>,
+    turn: u32,
 }
 
 impl Handler for ThisHandler {
@@ -67,13 +69,19 @@ impl Handler for ThisHandler {
     fn notified(&mut self, channel: Channel) -> Result<(), Self::Error> {
         if channel == self.serial.channel {
             while let Ok(b) = self.serial.read() {
-                if let b'\n' | b'\r' = b {
-                    newline(&mut self.serial);
-                    if !self.buffer.is_empty() {
-                        self.try_create();
+                if b == b'\n' || b == b'\r' {
+                    //newline(&mut self.serial);
+                    //if !self.buffer.is_empty() {
+                    //    self.try_create();
+                    //}
+                    //prompt(&mut self.serial);
+                    sel4cp::debug_print!("Turn {}\n", self.turn);
+                    if self.turn % 2 == 0 {
+                        ETH_CLIENT.notify(); // ping the local ethernet client every other newline keystroke
+                    } else {
+                        ETH_CLIENT_REMOTE.notify(); // ping the remote ethernet client every other newline keystroke
                     }
-                    prompt(&mut self.serial);
-                    ETH_CLIENT.notify(); // ping the ethernet client upon each non-newline keystroke
+                    self.turn += 1;
                     // This is just for debugging, if you need to trigger the other side
                     //ETH_CLIENT_REMOTE.notify(); // ping the ethernet client upon each non-newline keystroke
                 } else {
