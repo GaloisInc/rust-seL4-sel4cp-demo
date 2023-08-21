@@ -9,9 +9,10 @@ child.logfile = fout
 # Wait for the prompt
 child.expect('banscii>',timeout=1)
 # Try hello world
-child.sendline('Hello World\r')
-# Wait for the prompt (ignore the output)
-child.expect('banscii>',timeout=1)
+child.sendline('Hello\r')
+child.expect('Sending some data: PING',timeout=1)
+child.sendline('World\r')
+child.expect('Sending some data: PONG',timeout=1)
 # Escape sequence
 child.sendcontrol('A')
 child.send('x')
