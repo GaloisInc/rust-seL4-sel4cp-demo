@@ -249,10 +249,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "eth-client-remote"
+version = "0.1.0"
+dependencies = [
+ "eth-driver-interface",
+ "sel4-shared-ring-buffer",
+ "sel4cp",
+ "smoltcp",
+]
+
+[[package]]
 name = "eth-driver"
 version = "0.1.0"
 dependencies = [
  "eth-driver-interface",
+ "heapless",
+ "point-to-point-phy",
  "sel4-shared-ring-buffer",
  "sel4cp",
 ]
@@ -265,6 +277,17 @@ dependencies = [
  "sel4-shared-ring-buffer",
  "sel4cp",
  "smoltcp",
+]
+
+[[package]]
+name = "eth-driver-remote"
+version = "0.1.0"
+dependencies = [
+ "eth-driver-interface",
+ "heapless",
+ "point-to-point-phy",
+ "sel4-shared-ring-buffer",
+ "sel4cp",
 ]
 
 [[package]]
@@ -598,6 +621,17 @@ checksum = "9eca2c590a5f85da82668fa685c09ce2888b9430e83299debf1f34b65fd4a4ba"
 dependencies = [
  "der",
  "spki",
+]
+
+[[package]]
+name = "point-to-point-phy"
+version = "0.1.0"
+dependencies = [
+ "eth-driver-interface",
+ "heapless",
+ "sel4-shared-ring-buffer",
+ "sel4cp",
+ "smoltcp",
 ]
 
 [[package]]

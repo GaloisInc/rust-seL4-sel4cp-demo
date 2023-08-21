@@ -66,14 +66,9 @@ impl Handler for ThisHandler {
         match channel {
             ETH_TEST => {
                 self.cnt = self.cnt + 100;
-                debug_print!("Got notification!\n");
+                debug_print!("Local client got notification!\n");
 
-                for i in 0..7 {
-                    debug_print!("Attempt {i}\n");
-                    //test_ethernet_loopback(self);
-                    //test_udp_loopback(self);
-                    test_tcp_loopback(self);
-                }
+                test_ethernet_ping(self);
             }
             _ => unreachable!(),
         }
@@ -81,6 +76,34 @@ impl Handler for ThisHandler {
     }
 }
 
+fn test_ethernet_ping(h: &mut ThisHandler) {
+    debug_print!("Testing ethernet ping\n");
+
+    match h.device.receive(Instant::from_millis(h.cnt)) {
+        None => debug_print!("[test_ethernet_ping] No RX token received\n"),
+        Some((rx, _tx)) => {
+            rx.consume(|buffer|
+                debug_print!(
+                    "[test_ethernet_ping] Got an RX token of length {}: {}\n",
+                    buffer.len(),
+                    core::str::from_utf8(buffer).unwrap(),
+                )
+            );
+        }
+    }
+    match h.device.transmit(Instant::from_millis(h.cnt)) {
+        None => debug_print!("[test_ethernet_ping] Didn't get a TX token\n"),
+        Some(tx) => {
+            debug_print!(
+                "[test_ethernet_ping] Got a TX token\nSending some data: {}\n",
+                core::str::from_utf8(&PING).unwrap(),
+            );
+            tx.consume(4, |buffer| buffer.copy_from_slice(PING.as_ref()))
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn test_ethernet_loopback(h: &mut ThisHandler) {
     debug_print!("Testing ethernet loopback\n");
 
@@ -119,6 +142,7 @@ fn test_ethernet_loopback(h: &mut ThisHandler) {
     }
 }
 
+#[allow(dead_code)]
 fn test_udp_loopback(h: &mut ThisHandler) {
     debug_print!("Testing UDP loopback\n");
 
@@ -194,6 +218,7 @@ fn test_udp_loopback(h: &mut ThisHandler) {
     }
 }
 
+#[allow(dead_code)]
 fn test_tcp_loopback(h: &mut ThisHandler) {
     debug_print!("Testing TCP loopback\n");
 

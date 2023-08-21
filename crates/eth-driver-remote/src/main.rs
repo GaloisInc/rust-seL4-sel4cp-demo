@@ -8,19 +8,19 @@ use heapless::Vec;
 use point_to_point_phy::PointToPointPhy;
 use eth_driver_interface as interface;
 
-const CLIENT: Channel = Channel::new(2);
-const REMOTE: Channel = Channel::new(4);
+const CLIENT: Channel = Channel::new(5);
+const LOCAL: Channel = Channel::new(4);
 
 #[protection_domain]
 fn init() -> interface::EthHandler<PointToPointPhy> {
     unsafe {
         interface::EthHandler::new(
             CLIENT,
-            REMOTE,
+            LOCAL,
             PointToPointPhy::new(
-                REMOTE,
-                memory_region_symbol!(from_remote: *mut Vec<u8, {interface::MTU}>),
-                memory_region_symbol!(to_remote: *mut Vec<u8, {interface::MTU}>),
+                LOCAL,
+                memory_region_symbol!(from_local: *mut Vec<u8, {interface::MTU}>),
+                memory_region_symbol!(to_local: *mut Vec<u8, {interface::MTU}>),
             ),
             memory_region_symbol!(tx_free_region_start: *mut interface::RawRingBuffer),
             memory_region_symbol!(tx_used_region_start: *mut interface::RawRingBuffer),

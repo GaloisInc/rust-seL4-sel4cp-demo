@@ -4,7 +4,7 @@
 use sel4cp::{Channel, Handler, debug_print};
 use sel4cp::memory_region::{ExternallySharedRef, ExternallySharedPtr, ReadWrite};
 use sel4_shared_ring_buffer::{RingBuffers, RingBuffer, Descriptor};
-use smoltcp::{phy, time::Instant};
+use smoltcp::{phy::{self, TxToken as PhyTxToken, RxToken as PhyRxToken}, time::Instant};
 
 pub use sel4_shared_ring_buffer::RawRingBuffer;
 pub use heapless::Vec;
@@ -21,20 +21,22 @@ pub const RX_BUF_SIZE: usize = 4;
 pub type Buf = heapless::Vec<u8, MTU>;
 pub type Bufs = [Buf];
 
-pub struct EthHandler/*<PhyDevice>*/ {
-    channel: Channel,
-    //phy_device: PhyDevice,
+pub struct EthHandler<PhyDevice> {
+    tx_channel: Channel, // From client, indicating a new item in the tx_ring
+    rx_channel: Channel, // Actually an interrupt
+    phy_device: PhyDevice,
     tx_ring: RingBuffers<'static, ()>,
     tx_bufs: ExternallySharedRef<'static, Bufs, ReadWrite>,
     rx_ring: RingBuffers<'static, ()>,
     rx_bufs: ExternallySharedRef<'static, Bufs, ReadWrite>,
 }
 
-impl/*<PhyDevice: phy::Device>*/ EthHandler/*<PhyDevice>*/ {
+impl<PhyDevice: phy::Device> EthHandler<PhyDevice> {
     // XXX This has a lot of arguments. Maybe use a builder pattern or a macro?
     pub unsafe fn new(
-        channel: Channel,
-        //phy_device: PhyDevice, 
+        tx_channel: Channel,
+        rx_channel: Channel,
+        phy_device: PhyDevice, 
         tx_free_ptr: core::ptr::NonNull<RawRingBuffer>,
         tx_used_ptr: core::ptr::NonNull<RawRingBuffer>,
         tx_bufs_ptr: core::ptr::NonNull<Bufs>,
@@ -80,8 +82,9 @@ impl/*<PhyDevice: phy::Device>*/ EthHandler/*<PhyDevice>*/ {
         }
 
         Self {
-            channel,
-            //phy_device,
+            tx_channel,
+            rx_channel,
+            phy_device,
             tx_ring,
             tx_bufs,
             rx_ring,
@@ -90,49 +93,65 @@ impl/*<PhyDevice: phy::Device>*/ EthHandler/*<PhyDevice>*/ {
     }
 }
 
-// TODO Use underlying PhyDevice for send/recv.
-impl/*<PhyDevice: phy::Device>*/ Handler for EthHandler/*<PhyDevice>*/ {
+impl<PhyDevice: phy::Device> Handler for EthHandler<PhyDevice> {
     type Error = !;
 
     fn notified(&mut self, channel: Channel) -> Result<(), Self::Error> {
-        if channel == self.channel {
-            match self.tx_ring.used_mut().dequeue() { // TODO We could send more than one frame here...
+        if channel == self.tx_channel {
+            match self.tx_ring.used_mut().dequeue() {
+                // Take the next used TX buffer
                 Ok(tx_desc) => {
-                    // Try to loop the packet back to the client
-                    match self.rx_ring.free_mut().dequeue() {
-                        Ok(rx_desc) => {
-                            // XXX Can we do this withoug the unsafe?
-                            let tx_buf = unsafe {
-                                self.tx_bufs
-                                    .as_ptr()
-                                    .index(tx_desc.encoded_addr())
-                                    .as_raw_ptr()
-                                    .as_ref()
-                                    .clone()
-                            };
-                            let rx_buf_mut = unsafe {
-                                self.rx_bufs
-                                    .as_mut_ptr()
-                                    .index(rx_desc.encoded_addr())
-                                    .as_raw_ptr()
-                                    .as_mut()
-                            };
+                    // Get the frame to be TX'd from the client's shared buffer
+                    let tx_buf = unsafe {
+                        self.tx_bufs
+                            .as_ptr()
+                            .index(tx_desc.encoded_addr())
+                            .as_raw_ptr()
+                            .as_ref()
+                            .clone()
+                    };
+                    let tx_len = tx_buf.len();
 
-                            rx_buf_mut.clear();
-                            let _ = rx_buf_mut.extend_from_slice(&tx_buf);
-
-                            let _ = self.rx_ring.used_mut().enqueue(Descriptor::new(rx_desc.encoded_addr(), MTU as u32, 0));
-                        }
-                        Err(_) => debug_print!("Failed to loop back; RX buffer is full"),
+                    // Send the frame to via the underlying PHY
+                    match self.phy_device.transmit(Instant::from_millis(100)) {
+                        Some(tx_token) => tx_token.consume(tx_len, |buf| buf.copy_from_slice(&tx_buf)),
+                        None => debug_print!("Driver failed to get a TX token from underlying PHY"),
                     }
 
                     // Free the TX buffer
                     let _ = self.tx_ring.free_mut().enqueue(Descriptor::new(tx_desc.encoded_addr(), MTU as u32, 0));
                 }
-                Err(_) => debug_print!("Driver notified, but TX buffer is empty"),
+                Err(_) => debug_print!("Driver notified, but TX ring is empty"),
+            }
+        } else if channel == self.rx_channel {
+            // Take the next free RX buffer
+            match self.rx_ring.free_mut().dequeue() {
+                Ok(rx_desc) => {
+                    // Get a shared buffer to place the frame in
+                    let rx_buf_mut = unsafe {
+                        self.rx_bufs
+                            .as_mut_ptr()
+                            .index(rx_desc.encoded_addr())
+                            .as_raw_ptr()
+                            .as_mut()
+                    };
+                    rx_buf_mut.clear();
+
+                    // Place the received frame in the buffer
+                    match self.phy_device.receive(Instant::from_millis(100)) {
+                        Some((rx_token, _)) => {
+                            let _ = rx_token.consume(|buf| rx_buf_mut.extend_from_slice(&buf));
+                        }
+                        None => debug_print!("Driver failed to get an RX token from the underlying PHY"),
+                    }
+
+                    // Put the buffer descriptor in the used ring
+                    let _ = self.rx_ring.used_mut().enqueue(Descriptor::new(rx_desc.encoded_addr(), MTU as u32, 0));
+                }
+                Err(_) => debug_print!("Driver dropped a frame: RX ring is full"),
             }
         } else {
-            unreachable!();
+            unreachable!()
         }
 
         Ok(())
@@ -195,7 +214,7 @@ impl EthDevice {
 pub struct TxToken<'a> {
     buf: ExternallySharedPtr<'a, Buf, ReadWrite>,
     desc: Descriptor,
-    timestamp: Instant,
+    _timestamp: Instant,
     tx_free: RingBuffer<'a>,
     tx_used: RingBuffer<'a>,
     channel: Channel,
@@ -255,7 +274,7 @@ impl phy::Device for EthDevice {
     type TxToken<'a> = TxToken<'a>;
     type RxToken<'a> = RxToken;
 
-    fn receive(&mut self, timestamp: Instant) -> Option<(Self::RxToken<'_>, Self::TxToken<'_>)> {
+    fn receive(&mut self, _timestamp: Instant) -> Option<(Self::RxToken<'_>, Self::TxToken<'_>)> {
         // TODO: Lock TX free ring and RX used ring
 
         // Ensure we don't take an RX buffer if no TX buffers are available
@@ -299,7 +318,7 @@ impl phy::Device for EthDevice {
             Self::TxToken {
                 buf: tx_buf,
                 desc: tx_desc,
-                timestamp,
+                _timestamp,
                 tx_free,
                 tx_used,
                 channel: self.channel,
@@ -307,7 +326,7 @@ impl phy::Device for EthDevice {
         ))
     }
 
-    fn transmit(&mut self, timestamp: Instant) -> Option<Self::TxToken<'_>> {
+    fn transmit(&mut self, _timestamp: Instant) -> Option<Self::TxToken<'_>> {
         // Reserve a TX buffer and give it to the client
         // TODO Lock TX free ring
         let desc = self.tx_ring.free_mut().dequeue().ok()?;
@@ -323,7 +342,7 @@ impl phy::Device for EthDevice {
         Some(Self::TxToken {
             buf,
             desc,
-            timestamp,
+            _timestamp,
             tx_free,
             tx_used,
             channel: self.channel,
