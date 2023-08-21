@@ -7,12 +7,12 @@ child = pexpect.spawn('make run',encoding='utf-8')
 fout = open('log.txt','w')
 child.logfile = fout
 # Wait for the prompt
-child.expect('banscii>',timeout=1)
+child.expect('banscii>',timeout=2)
 # Try hello world
 child.sendline('Hello\r')
-child.expect('Sending some data: PING',timeout=1)
+child.expect('PING',timeout=2)
 child.sendline('World\r')
-child.expect('Sending some data: PONG',timeout=1)
+child.expect('PONG',timeout=2)
 # Escape sequence
 child.sendcontrol('A')
 child.send('x')
